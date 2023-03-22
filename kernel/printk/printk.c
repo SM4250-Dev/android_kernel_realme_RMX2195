@@ -653,20 +653,6 @@ static int log_store(int facility, int level,
 	u32 size, pad_len;
 	u16 trunc_msg_len = 0;
 
-	#if defined(OPLUS_FEATURE_POWERINFO_STANDBY_DEBUG) && defined(CONFIG_OPLUS_POWERINFO_STANDBY_DEBUG)
-	/* modify for power debug */
-	int this_cpu = smp_processor_id();
-	char tbuf[64];
-	unsigned tlen;
-
-	if (console_suspended == 0) {
-		tlen = snprintf(tbuf, sizeof(tbuf), " (%x)[%d:%s]",
-			this_cpu, current->pid, current->comm);
-	} else {
-		tlen = snprintf(tbuf, sizeof(tbuf), " %x)", this_cpu);
-	}
-	text_len += tlen;
-	#endif
 
 	/* number of '\0' padding bytes to next message */
 	size = msg_used_size(text_len, dict_len, &pad_len);
@@ -692,13 +678,7 @@ static int log_store(int facility, int level,
 
 	/* fill message */
 	msg = (struct printk_log *)(log_buf + log_next_idx);
-	#if !defined(OPLUS_FEATURE_POWERINFO_STANDBY_DEBUG) && !defined(CONFIG_OPLUS_POWERINFO_STANDBY_DEBUG)
-	/* modify for power debug */
 	memcpy(log_text(msg), text, text_len);
-	#else
-	memcpy(log_text(msg), tbuf, tlen);
-	memcpy(log_text(msg) + tlen, text, text_len-tlen);
-	#endif
 	msg->text_len = text_len;
 	if (trunc_msg_len) {
 		memcpy(log_text(msg) + text_len, trunc_msg, trunc_msg_len);
