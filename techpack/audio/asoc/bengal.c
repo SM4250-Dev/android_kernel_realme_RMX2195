@@ -48,8 +48,18 @@
 #endif
 
 #ifdef OPLUS_ARCH_EXTENDS
-#include "../../../../oplus/kernel_4.19/audio/codecs/sia81xx/sia81xx_aux_dev_if.h"
+#include "codecs/sia81xx/sia81xx_aux_dev_if.h"
 #endif /* OPLUS_ARCH_EXTENDS */
+
+
+#ifdef CONFIG_SND_SOC_OPLUS_PA_MANAGER
+#include "codecs/common/oplus_speaker_manager.h"
+#endif
+
+#ifdef CONFIG_SND_SOC_AW882XX //add by Jerry
+extern void aw_cal_unmap_memory(void);
+#endif /* CONFIG_SND_SOC_AWINIC_AW882X X*/
+
 
 #define DRV_NAME "bengal-asoc-snd"
 #define __CHIPSET__ "BENGAL "
