@@ -1403,13 +1403,10 @@ endif
 ifneq "$(OBJCOPY)" "aarch64-linux-gnu-objcopy"
 include/config/auto.conf: FORCE
 endif
-ifneq "$(CLANG_FLAGS)" "--target=aarch64-linux-gnu --prefix=/workspace/Strombreaker-prjkt/../gas//aarch64-linux-gnu- --gcc-toolchain=/workspace -no-integrated-as  -Wno-misleading-indentation  -Wno-bool-operation -Werror=unknown-warning-option  -Wno-unsequenced"
+ifneq "$(CLANG_FLAGS)" "--target=aarch64-linux-gnu --prefix=/sec/root/line/../gas//aarch64-linux-gnu- --gcc-toolchain=/sec/root -no-integrated-as  -Wno-misleading-indentation  -Wno-bool-operation -Werror=unknown-warning-option  -Wno-unsequenced"
 include/config/auto.conf: FORCE
 endif
 ifneq "$(SRCARCH)" "arm64"
-include/config/auto.conf: FORCE
-endif
-ifneq "$(CROSS_COMPILE_COMPAT)" "arm-linux-gnueabi-"
 include/config/auto.conf: FORCE
 endif
 ifneq "$(HOSTCXX)" "g++"
