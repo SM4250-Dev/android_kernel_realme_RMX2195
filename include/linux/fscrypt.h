@@ -754,7 +754,7 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
  */
 static inline int fscrypt_prepare_lookup(struct inode *dir,
 					 struct dentry *dentry,
-					 struct fscrypt_name *fname);
+					 struct fscrypt_name *fname)
 {
 	if (IS_ENCRYPTED(dir))
 		return __fscrypt_prepare_lookup(dir, dentry, fname);
