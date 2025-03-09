@@ -2411,6 +2411,9 @@ static inline int ext4_fname_setup_filename(struct inode *dir,
 					    const struct qstr *iname,
 					    int lookup,
 					    struct ext4_filename *fname)
+					    const struct qstr *iname,
+					    int lookup,
+					    struct ext4_filename *fname)
 {
 	struct fscrypt_name name;
 	int err;
@@ -2464,6 +2467,9 @@ static inline void ext4_fname_free_filename(struct ext4_filename *fname)
 }
 #else /* !CONFIG_FS_ENCRYPTION */
 static inline int ext4_fname_setup_filename(struct inode *dir,
+					    const struct qstr *iname,
+					    int lookup,
+					    struct ext4_filename *fname)
 					    const struct qstr *iname,
 					    int lookup,
 					    struct ext4_filename *fname)

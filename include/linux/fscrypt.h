@@ -36,6 +36,7 @@ struct fscrypt_name {
 	u32 hash;
 	u32 minor_hash;
 	struct fscrypt_str crypto_buf;
+	//bool is_ciphertext_name;
 	bool is_ciphertext_name;
 };
 
@@ -675,6 +676,7 @@ static inline int fscrypt_require_key(struct inode *inode)
  *
  * Return: 0 on success, -ENOKEY if the directory's encryption key is missing,
  * -EXDEV if the link would result in an inconsistent encryption policy, or
+ * -EXDEV if the link would result in an inconsistent encryption policy, or
  * another -errno code.
  */
 static inline int fscrypt_prepare_link(struct dentry *old_dentry,
@@ -682,6 +684,7 @@ static inline int fscrypt_prepare_link(struct dentry *old_dentry,
 				       struct dentry *dentry)
 {
 	if (IS_ENCRYPTED(dir))
+		return __fscrypt_prepare_link(d_inode(old_dentry), dir, dentry);
 		return __fscrypt_prepare_link(d_inode(old_dentry), dir, dentry);
 	return 0;
 }
@@ -706,6 +709,7 @@ static inline int fscrypt_prepare_link(struct dentry *old_dentry,
  * in an encrypted directory tree use the same encryption policy.
  *
  * Return: 0 on success, -ENOKEY if an encryption key is missing, -EXDEV if the
+ * Return: 0 on success, -ENOKEY if an encryption key is missing, -EXDEV if the
  * rename would cause inconsistent encryption policies, or another -errno code.
  */
 static inline int fscrypt_prepare_rename(struct inode *old_dir,
@@ -726,7 +730,11 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
  * @dir: directory being searched
  * @dentry: filename being looked up
  * @fname: (output) the name to use to search the on-disk directory
+ * @fname: (output) the name to use to search the on-disk directory
  *
+ * Prepare for ->lookup() in a directory which may be encrypted by determining
+ * the name that will actually be used to search the directory on-disk.  Lookups
+ * can be done with or without the directory's encryption key; without the key,
  * Prepare for ->lookup() in a directory which may be encrypted by determining
  * the name that will actually be used to search the directory on-disk.  Lookups
  * can be done with or without the directory's encryption key; without the key,
@@ -740,12 +748,22 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
  * Return: 0 on success; -ENOENT if key is unavailable but the filename isn't a
  * correctly formed encoded ciphertext name, so a negative dentry should be
  * created; or another -errno code.
+ * Return: 0 on success; -ENOENT if key is unavailable but the filename isn't a
+ * correctly formed encoded ciphertext name, so a negative dentry should be
+ * created; or another -errno code.
  */
 static inline int fscrypt_prepare_lookup(struct inode *dir,
 					 struct dentry *dentry,
 					 struct fscrypt_name *fname)
+					 struct fscrypt_name *fname)
 {
 	if (IS_ENCRYPTED(dir))
+		return __fscrypt_prepare_lookup(dir, dentry, fname);
+
+	memset(fname, 0, sizeof(*fname));
+	fname->usr_fname = &dentry->d_name;
+	fname->disk_name.name = (unsigned char *)dentry->d_name.name;
+	fname->disk_name.len = dentry->d_name.len;
 		return __fscrypt_prepare_lookup(dir, dentry, fname);
 
 	memset(fname, 0, sizeof(*fname));

@@ -304,11 +304,13 @@ static int _aead_recvmsg(struct socket *sock, struct msghdr *msg,
 
 		aead_request_set_callback(&areq->cra_u.aead_req,
 					  CRYPTO_TFM_REQ_MAY_SLEEP,
+					  CRYPTO_TFM_REQ_MAY_SLEEP,
 					  af_alg_async_cb, areq);
 		err = ctx->enc ? crypto_aead_encrypt(&areq->cra_u.aead_req) :
 				 crypto_aead_decrypt(&areq->cra_u.aead_req);
 
 		/* AIO operation in progress */
+		if (err == -EINPROGRESS)
 		if (err == -EINPROGRESS)
 			return -EIOCBQUEUED;
 
@@ -316,6 +318,7 @@ static int _aead_recvmsg(struct socket *sock, struct msghdr *msg,
 	} else {
 		/* Synchronous operation */
 		aead_request_set_callback(&areq->cra_u.aead_req,
+					  CRYPTO_TFM_REQ_MAY_SLEEP |
 					  CRYPTO_TFM_REQ_MAY_SLEEP |
 					  CRYPTO_TFM_REQ_MAY_BACKLOG,
 					  crypto_req_done, &ctx->wait);

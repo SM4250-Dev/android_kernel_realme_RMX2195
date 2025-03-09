@@ -1743,6 +1743,7 @@ static int qcom_glink_rx_open(struct qcom_glink *glink, unsigned int rcid,
 	spin_unlock_irqrestore(&glink->idr_lock, flags);
 
 	complete_all(&channel->open_req);
+	complete_all(&channel->open_req);
 
 	if (create_device) {
 		rpdev = kzalloc(sizeof(*rpdev), GFP_KERNEL);

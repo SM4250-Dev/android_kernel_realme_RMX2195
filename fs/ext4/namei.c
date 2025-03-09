@@ -1503,6 +1503,7 @@ static int is_dx_internal_node(struct inode *dir, ext4_lblk_t block,
 
 /*
  *	__ext4_find_entry()
+ *	__ext4_find_entry()
  *
  * finds an entry in the specified directory with the wanted name. It
  * returns the cache buffer in which the entry was found, and the entry
@@ -1522,6 +1523,7 @@ static struct buffer_head *__ext4_find_entry(struct inode *dir,
 	struct buffer_head *bh, *ret = NULL;
 	ext4_lblk_t start, block;
 	const u8 *name = fname->usr_fname->name;
+	const u8 *name = fname->usr_fname->name;
 	size_t ra_max = 0;	/* Number of bh's in the readahead
 				   buffer, bh_use[] */
 	size_t ra_ptr = 0;	/* Current index into readahead
@@ -1532,11 +1534,13 @@ static struct buffer_head *__ext4_find_entry(struct inode *dir,
 	*res_dir = NULL;
 	sb = dir->i_sb;
 	namelen = fname->usr_fname->len;
+	namelen = fname->usr_fname->len;
 	if (namelen > EXT4_NAME_LEN)
 		return NULL;
 
 	if (ext4_has_inline_data(dir)) {
 		int has_inline_data = 1;
+		ret = ext4_find_inline_entry(dir, fname, res_dir,
 		ret = ext4_find_inline_entry(dir, fname, res_dir,
 					     &has_inline_data);
 		if (lblk)
@@ -1766,6 +1770,7 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
 	if (dentry->d_name.len > EXT4_NAME_LEN)
 		return ERR_PTR(-ENAMETOOLONG);
 
+	bh = ext4_lookup_entry(dir, dentry, &de);
 	bh = ext4_lookup_entry(dir, dentry, &de);
 	if (IS_ERR(bh))
 		return (struct dentry *) bh;

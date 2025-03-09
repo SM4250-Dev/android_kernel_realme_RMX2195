@@ -149,6 +149,7 @@ static enum hrtimer_restart txdone_hrtimer(struct hrtimer *hrtimer)
 
 		if (chan->active_req && chan->cl) {
 			resched = true;
+			resched = true;
 			txdone = chan->mbox->ops->last_tx_done(chan);
 			if (txdone)
 				tx_tick(chan, 0);
