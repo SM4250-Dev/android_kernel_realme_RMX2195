@@ -100,7 +100,7 @@
 #include "audit.h"
 #include "avc_ss.h"
 
-struct selinux_state selinux_state __rticdata;
+struct selinux_state selinux_state;
 
 /* SECMARK reference count */
 static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
@@ -7351,6 +7351,15 @@ void selinux_complete_init(void)
 	pr_debug("SELinux:  Setting up existing superblocks.\n");
 	iterate_supers(delayed_superblock_init, NULL);
 }
+
+
+#ifdef CONFIG_OPLUS_SECURE_GUARD
+int get_current_security_context(char **context, u32 *context_len)
+{
+	u32 sid = current_sid();
+	return security_sid_to_context(&selinux_state, sid, context, context_len);
+}
+#endif /* CONFIG_OPLUS_SECURE_GUARD */
 
 /* SELinux requires early initialization in order to label
    all processes and objects when they are created. */
