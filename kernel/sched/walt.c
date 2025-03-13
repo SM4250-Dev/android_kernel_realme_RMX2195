@@ -13,7 +13,12 @@
 #include "walt.h"
 
 #include <trace/events/sched.h>
-
+#ifdef OPLUS_FEATURE_UIFIRST
+#include <linux/sched.h>
+extern u64 ux_task_load[];
+extern u64 ux_load_ts[];
+#define UX_LOAD_WINDOW 8000000
+#endif /* OPLUS_FEATURE_UIFIRST */
 const char *task_event_names[] = {"PUT_PREV_TASK", "PICK_NEXT_TASK",
 				  "TASK_WAKE", "TASK_MIGRATE", "TASK_UPDATE",
 				"IRQ_UPDATE"};
@@ -515,7 +520,11 @@ static inline u64 freq_policy_load(struct rq *rq)
 	u64 aggr_grp_load = cluster->aggr_grp_load;
 	u64 load, tt_load = 0;
 	struct task_struct *cpu_ksoftirqd = per_cpu(ksoftirqd, cpu_of(rq));
-
+#ifdef OPLUS_FEATURE_UIFIRST
+	u64 wallclock = sched_ktime_clock();
+	u64 timeline = 0;
+	int cpu = cpu_of(rq);
+#endif /* OPLUS_FEATURE_UIFIRST */
 	if (rq->ed_task != NULL) {
 		load = sched_ravg_window;
 		goto done;
@@ -550,7 +559,14 @@ static inline u64 freq_policy_load(struct rq *rq)
 			load = div64_u64(load * sysctl_sched_user_hint,
 					 (u64)100);
 	}
-
+#ifdef OPLUS_FEATURE_UIFIRST
+	if (sysctl_uifirst_enabled && sysctl_slide_boost_enabled && ux_load_ts[cpu]) {
+		timeline = wallclock - ux_load_ts[cpu];
+		if  (timeline >= UX_LOAD_WINDOW)
+			ux_task_load[cpu] = 0;
+		load = max_t(u64, load, ux_task_load[cpu]);
+	}
+#endif /* OPLUS_FEATURE_UIFIRST */
 done:
 	trace_sched_load_to_gov(rq, aggr_grp_load, tt_load, sched_freq_aggr_en,
 				load, reporting_policy, walt_rotation_enabled,
@@ -2077,10 +2093,8 @@ static inline void run_walt_irq_work(u64 old_window_start, struct rq *rq)
 
 	result = atomic64_cmpxchg(&walt_irq_work_lastq_ws, old_window_start,
 				   rq->window_start);
-	if (result == old_window_start) {
+	if (result == old_window_start)
 		walt_irq_work_queue(&walt_cpufreq_irq_work);
-		trace_walt_window_rollover(rq->window_start);
-	}
 }
 
 /* Reflect task activity on its demand and cpu's busy time statistics */
