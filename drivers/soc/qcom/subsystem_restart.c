@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt) "subsys-restart: %s(): " fmt, __func__
@@ -35,6 +35,10 @@
 #include <linux/timer.h>
 
 #include "peripheral-loader.h"
+#ifdef OPLUS_BUG_STABILITY
+/*Add for disable dump for subsys crash*/
+#include <soc/oppo/oppo_project.h>
+#endif
 
 #define DISABLE_SSR 0x9889deed
 /* If set to 0x9889deed, call to subsystem_restart_dev() returns immediately */
@@ -778,7 +782,6 @@ static int subsystem_powerup(struct subsys_device *dev, void *data)
 	pr_info("[%s:%d]: Powering up %s\n", current->comm, current->pid, name);
 	reinit_completion(&dev->err_ready);
 
-	enable_all_irqs(dev);
 	ret = dev->desc->powerup(dev->desc);
 	if (ret < 0) {
 		notify_each_subsys_device(&dev, 1, SUBSYS_POWERUP_FAILURE,
@@ -794,6 +797,7 @@ static int subsystem_powerup(struct subsys_device *dev, void *data)
 			pr_err("Powerup failure on %s\n", name);
 		return ret;
 	}
+	enable_all_irqs(dev);
 
 	ret = wait_for_err_ready(dev);
 	if (ret) {
@@ -1208,6 +1212,43 @@ static void device_restart_work_hdlr(struct work_struct *work)
 	panic("subsys-restart: Resetting the SoC - %s crashed.",
 							dev->desc->name);
 }
+
+#ifdef OPLUS_FEATURE_MODEM_MINIDUMP
+void __subsystem_send_uevent(struct device *dev, char *reason)
+{
+	int ret_val;
+	char modem_event[] = "MODEM_EVENT=modem_failure";
+	char modem_reason[300] = {0};
+	char *envp[3];
+
+	envp[0] = (char *)&modem_event;
+	if(reason){
+		snprintf(modem_reason, sizeof(modem_reason),"MODEM_REASON=%s", reason);
+	}else{
+	    snprintf(modem_reason, sizeof(modem_reason),"MODEM_REASON=unkown");
+	}
+	modem_reason[299] = 0;
+	envp[1] = (char *)&modem_reason;
+	envp[2] = 0;
+
+	if(dev){
+		ret_val = kobject_uevent_env(&(dev->kobj), KOBJ_CHANGE, envp);
+		if(!ret_val){
+			pr_info("modem crash:kobject_uevent_env success!\n");
+		}else{
+			pr_info("modem crash:kobject_uevent_env fail,error=%d!\n", ret_val);
+		}
+    }
+}
+EXPORT_SYMBOL(__subsystem_send_uevent);
+
+void subsystem_send_uevent(struct subsys_device *dev, char *reason)
+{
+	__subsystem_send_uevent(&(dev->dev), reason);
+	return;
+}
+EXPORT_SYMBOL(subsystem_send_uevent);
+#endif /*OPLUS_FEATURE_MODEM_MINIDUMP*/
 
 int subsystem_restart_dev(struct subsys_device *dev)
 {
@@ -1821,6 +1862,10 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 	subsys->dev.bus = &subsys_bus_type;
 	subsys->dev.release = subsys_device_release;
 	subsys->notif_state = -1;
+#ifdef OPLUS_BUG_STABILITY
+	if(!oppo_daily_build() && !(get_eng_version() == AGING))
+		subsys->restart_level = RESET_SUBSYS_COUPLED;
+#endif /*OPLUS_BUG_STABILITY */
 	subsys->desc->sysmon_pid = -1;
 	subsys->desc->state = NULL;
 	strlcpy(subsys->desc->fw_name, desc->name,
