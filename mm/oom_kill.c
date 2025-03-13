@@ -70,8 +70,9 @@ module_param(panic_on_adj_zero, int, 0644);
  * and mark_oom_victim
  */
 DEFINE_MUTEX(oom_lock);
-/* Serializes oom_score_adj and oom_score_adj_min updates */
-DEFINE_MUTEX(oom_adj_mutex);
+/*<<<<<<< HEAD*/
+/* Serializes oom_score_adj and oom_score_adj_min updates*/ 
+/*DEFINE_MUTEX(oom_adj_mutex);*/
 
 /*
  * If ULMK has killed a process recently,
@@ -242,6 +243,9 @@ void ulmk_update_last_kill(void)
 	atomic64_set(&ulmk_kill_jiffies, jiffies);
 }
 #endif
+/* Serializes oom_score_adj and oom_score_adj_min updates */
+DEFINE_MUTEX(oom_adj_mutex);
+//>>>>>>> 877d4a14eea6cdf3a4579579c72a1f1eeaf8878f
 
 #ifdef CONFIG_NUMA
 /**
