@@ -368,6 +368,7 @@ endif
 KBUILD_HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 \
 		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS) \
 		$(HOSTCFLAGS)
+KBUILD_HOSTCFLAGS   += -Wno-deprecated-declarations
 KBUILD_HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS)
 KBUILD_HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS) $(HOSTLDFLAGS)
 KBUILD_HOSTLDLIBS   := $(HOST_LFS_LIBS) $(HOSTLDLIBS)
@@ -385,7 +386,7 @@ READELF		= llvm-readelf
 OBJSIZE		= llvm-size
 STRIP		= llvm-strip
 else
-REAL_CC		= $(CROSS_COMPILE)gcc
+CC		= $(CROSS_COMPILE)gcc
 LD		= $(CROSS_COMPILE)ld
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -408,9 +409,7 @@ PYTHON3		= python3
 CHECK		= sparse
 
 # Use the wrapper for the compiler.  This wrapper scans for new
-# warnings and causes the build to stop upon encountering them
-CC		= $(PYTHON) $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
-
+# warnings and causes the build to stop upon encounterin
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void -Wno-unknown-attribute $(CF)
 NOSTDINC_FLAGS  =
@@ -453,6 +452,90 @@ KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 KBUILD_LDFLAGS :=
 GCC_PLUGINS_CFLAGS :=
 CLANG_FLAGS :=
+
+# ifdef VENDOR_EDIT
+KBUILD_CFLAGS +=   -DVENDOR_EDIT
+KBUILD_CPPFLAGS += -DVENDOR_EDIT
+CFLAGS_KERNEL +=   -DVENDOR_EDIT
+CFLAGS_MODULE +=   -DVENDOR_EDIT
+#endif /* VENDOR_EDIT */
+#ifdef VENDOR_EDIT
+-include OplusKernelEnvConfig.mk
+#endif // COLOROS_EDIT
+
+ifneq (,$(findstring Aging,$(SPECIAL_VERSION)))
+OPLUS_F2FS_DEBUG := true
+endif
+
+export OPLUS_F2FS_DEBUG
+
+#ifdef OPLUS_BUG_STABILITY
+ifeq ($(AGING_DEBUG_MASK),1)
+#Agingtest enable rtb
+OPLUS_AGING_TEST := true
+endif
+
+ifeq ($(AGING_DEBUG_MASK),2)
+#enable rtb
+OPLUS_AGING_TEST := true
+#enable kasan
+OPLUS_KASAN_TEST := true
+endif
+
+
+ifeq ($(AGING_DEBUG_MASK),3)
+#enable rtb
+OPLUS_AGING_TEST := true
+#enable kasan
+OPLUS_KMEMLEAK_TEST := true
+endif
+
+ifeq ($(AGING_DEBUG_MASK),4)
+#enable rtb
+OPLUS_AGING_TEST := true
+#enable kasan
+OPLUS_SLUB_TEST := true
+endif
+
+ifeq ($(AGING_DEBUG_MASK),5)
+#enable rtb
+OPLUS_AGING_TEST := true
+#enable kasan
+OPLUS_PAGEOWNER_TEST := true
+endif
+
+ifeq ($(AGING_DEBUG_MASK),6)
+#enable rtb
+OPLUS_AGING_TEST := true
+#enable slub debug and pageowner 
+OPLUS_PAGEOWNER_TEST := true
+OPLUS_SLUB_TEST := true
+endif
+
+ifeq ($(AGING_DEBUG_MASK),7)
+#enable rtb
+OPLUS_AGING_TEST := true
+#enable slub debug and pageowner 
+OPLUS_KASAN_TEST := true
+OPLUS_SLUB_TEST := true
+endif
+
+export OPLUS_AGING_TEST OPLUS_KASAN_TEST OPLUS_KMEMLEAK_TEST OPLUS_SLUB_TEST OPLUS_PAGEOWNER_TEST
+#endif
+
+#ifdef OPLUS_FEATURE_MEMLEAK_DETECT
+#Add for memleak test
+ifeq ($(TARGET_MEMLEAK_DETECT_TEST),0)
+OPLUS_MEMLEAK_DETECT := false
+else ifeq ($(TARGET_MEMLEAK_DETECT_TEST),1)
+OPLUS_MEMLEAK_DETECT := true
+endif
+
+#Add for memleak test
+# $(warning TARGET_MEMLEAK_DETECT_TEST value is "$(TARGET_MEMLEAK_DETECT_TEST)")
+# $(warning OPLUS_MEMLEAK_DETECT value is "$(OPLUS_MEMLEAK_DETECT)")
+export OPLUS_MEMLEAK_DETECT
+#endif
 
 export ARCH SRCARCH CONFIG_SHELL HOSTCC KBUILD_HOSTCFLAGS CROSS_COMPILE LD CC
 export CPP AR NM STRIP OBJCOPY OBJDUMP OBJSIZE READELF KBUILD_HOSTLDFLAGS KBUILD_HOSTLDLIBS
@@ -505,7 +588,11 @@ endif
 
 ifeq ($(cc-name),clang)
 ifneq ($(CROSS_COMPILE),)
-CLANG_FLAGS	+= --target=$(notdir $(CROSS_COMPILE:%-=%))
+CLANG_TRIPLE	?= $(CROSS_COMPILE)
+CLANG_FLAGS	+= --target=$(notdir $(CLANG_TRIPLE:%-=%))
+ifeq ($(shell $(srctree)/scripts/clang-android.sh $(CC) $(CLANG_FLAGS)), y)
+$(error "Clang with Android --target detected. Did you specify CLANG_TRIPLE?")
+endif
 GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))
 CLANG_FLAGS	+= --prefix=$(GCC_TOOLCHAIN_DIR)$(notdir $(CROSS_COMPILE))
 GCC_TOOLCHAIN	:= $(realpath $(GCC_TOOLCHAIN_DIR)/..)
@@ -581,12 +668,8 @@ KBUILD_MODULES :=
 KBUILD_BUILTIN := 1
 
 # If we have only "make modules", don't compile built-in objects.
-# When we're building modules with modversions, we need to consider
-# the built-in objects during the descend as well, in order to
-# make sure the checksums are up to date before we record them.
-
 ifeq ($(MAKECMDGOALS),modules)
-  KBUILD_BUILTIN := $(if $(CONFIG_MODVERSIONS),1)
+  KBUILD_BUILTIN :=
 endif
 
 # If we have "make <whatever> modules", compile modules
@@ -1045,6 +1128,10 @@ export INSTALL_DTBS_PATH ?= $(INSTALL_PATH)/dtbs/$(KERNELRELEASE)
 MODLIB	= $(INSTALL_MOD_PATH)/lib/modules/$(KERNELRELEASE)
 export MODLIB
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+KBUILD_CFLAGS += -DOPLUS_FEATURE_CHG_BASIC
+#endif
+
 #
 # INSTALL_MOD_STRIP, if defined, will cause modules to be
 # stripped after they are installed.  If INSTALL_MOD_STRIP is '1', then
@@ -1388,6 +1475,13 @@ ifdef CONFIG_MODULES
 # By default, build modules as well
 
 all: modules
+
+# When we're building modules with modversions, we need to consider
+# the built-in objects during the descend as well, in order to
+# make sure the checksums are up to date before we record them.
+ifdef CONFIG_MODVERSIONS
+  KBUILD_BUILTIN := 1
+endif
 
 # Build modules
 #
