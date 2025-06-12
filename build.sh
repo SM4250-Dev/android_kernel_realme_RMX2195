@@ -17,7 +17,7 @@ export PATH="$TC_DIR/bin:$PATH"
 export PATH="$TC_DIR/:$PATH" 
 export PATH="$GAS/bin:$PATH" 
 export PATH="$GAS/:$PATH"
-DEFCONFIG="vendor/bengal-perf_defconfig"
+DEFCONFIG="stock_defconfig"
 clear
 echo -e " "
 echo -e "${txtbld}Config:${txtrst} $DEFCONFIG"
