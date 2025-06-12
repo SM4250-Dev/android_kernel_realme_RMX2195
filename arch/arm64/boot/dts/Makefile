@@ -26,6 +26,11 @@ subdir-y += synaptics
 subdir-y += ti
 subdir-y += xilinx
 subdir-y += zte
+subdir-y += oplus/beta
+subdir-y += oplus/rum
+subdir-y += oplus/coco
+subdir-y += oplus/soda
+subdir-y += oplus/pascalh
 
 
 dtstree		:= $(srctree)/$(src)
