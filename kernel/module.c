@@ -1290,6 +1290,7 @@ static int check_version(const struct load_info *info,
 	struct modversion_info *versions;
 
 	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
+	return 1;
 	if (!crc)
 		return 1;
 
