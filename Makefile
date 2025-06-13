@@ -365,6 +365,7 @@ else
 HOSTCC	= gcc
 HOSTCXX	= g++
 endif
+KBUILD_HOSTCFLAGS   := -Wno-deprecated-declarations
 KBUILD_HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 \
 		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS) \
 		$(HOSTCFLAGS)
