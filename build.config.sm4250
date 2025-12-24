@@ -1,0 +1,5 @@
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.common
+. ${ROOT_DIR}/${KERNEL_DIR}/build.config.aarch64
+
+DEFCONFIG="vendor/RMX2195_defconfig"
+KERNEL_DIR="sm4250-kernel"
