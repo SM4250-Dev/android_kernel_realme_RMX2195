@@ -207,6 +207,12 @@ ifdef CONFIG_QTI_PP
 	PLATFORM_OBJS += msm-qti-pp-config.o
 endif
 
+##ifdef OPLUS_ARCH_EXTENDS
+ifdef CONFIG_SND_SOC_AW87359_SPK
+	AW87359_SPK_OBJS += aw873xx/aw87359_spk_audio.o
+endif
+##endif /* OPLUS_ARCH_EXTENDS */
+
 LINUX_INC +=	-Iinclude/linux
 
 INCS +=		$(COMMON_INC) \
