@@ -36,6 +36,7 @@
 #include "codecs/wcd937x/wcd937x.h"
 #include "codecs/rouleur/rouleur.h"
 #include "codecs/bolero/bolero-cdc.h"
+#include "codecs/aw87xxx/aw87xxx.h"
 #include <dt-bindings/sound/audio-codec-port-types.h>
 #include "bengal-port-config.h"
 
