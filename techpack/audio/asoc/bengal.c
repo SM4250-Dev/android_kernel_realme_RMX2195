@@ -3009,7 +3009,7 @@ static int aw87xxx_rcv_voltage = 80;
 static int aw87xxx_spk_voltage = 80;
 //extern int (*awinic_set_rcv_voltage_pf) (int val);
 //extern int (*awinic_set_spk_voltage_pf) (int val);
-extern int aw87xxx_set_spk_voltage(int level);
+//extern int aw87xxx_set_spk_voltage(int level);
 
 static int ext_top_speaker_voltage_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
@@ -3073,7 +3073,7 @@ static int ext_bottom_speaker_voltage_put(struct snd_kcontrol *kcontrol,
 		aw87xxx_spk_voltage = AW87XXX_SPK_VOLTAGE_DEFAULT;
 	}
 
-	aw87xxx_set_spk_voltage(aw87xxx_spk_voltage);
+	//aw87xxx_set_spk_voltage(aw87xxx_spk_voltage);
 
 	return 0;
 }
