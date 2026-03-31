@@ -2,7 +2,7 @@
 set -e
 
 # Core Config
-KERNELNAME="SkywalkerX"
+KERNELNAME="StrombreakerX"
 VARIANT="Stable"
 DEVICE="RMX2195"
 DEFCONFIG="RMX2195_defconfig"
@@ -14,10 +14,10 @@ BOT_MSG="https://api.telegram.org/bot$TG_TOKEN/sendMessage"
 BOT_DOC="https://api.telegram.org/bot$TG_TOKEN/sendDocument"
 
 # Functions
-msg() { echo -e "[*] $1"; }
-status() { echo -e "[⏳] $1"; }
-tg() { curl -s -X POST "$BOT_MSG" -d chat_id="$CHATID" -d parse_mode=html -d text="$1" >/dev/null &; }
-tg_file() { curl -s -F document=@"$1" "$BOT_DOC" -F chat_id="$CHATID" -F caption="$2" >/dev/null &; }
+msg() { echo -e "[*] $1" }
+status() { echo -e "[⏳] $1" }
+tg() { curl -s -X POST "$BOT_MSG" -d chat_id="$CHATID" -d parse_mode=html -d text="$1" >/dev/null}
+tg_file() { curl -s -F document=@"$1" "$BOT_DOC" -F chat_id="$CHATID" -F caption="$2" >/dev/null }
 
 clone() {
     status "Cloning Clang..."
@@ -44,7 +44,8 @@ setup() {
 }
 
 build() {
-    [ $INCREMENTAL = 0 ] && { make mrproper 2>/dev/null; rm -rf out; }
+    [ $INCREMENTAL = 0 ] && { make mrproper 2>/dev/null \
+    rm -rf out}
     
     status "Configuring..."
     make O=out $DEFCONFIG >/dev/null 2>&1
