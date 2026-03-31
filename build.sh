@@ -40,77 +40,97 @@ if [[ $1 == "-mr" || $1 == "clean" ]]; then
 clean
 exit
 fi
-update() {
-echo -e " "
-        sudo apt-get update 
-        sudo apt-get install -y cpio ccache build-essential bc curl git zip ftp gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev lftp zstd wget libfl-dev python3 libarchive-tools device-tree-compiler zsh 
-echo -e "dependencies installed"
-sleep 2
+#!/bin/bash
+set -e
+
+# Core Config
+KERNELNAME="SkywalkerX"
+VARIANT="Stable"
+DEVICE="RMX2195"
+DEFCONFIG="RMX2195_defconfig"
+FILES="Image.gz"
+
+# Telegram 
+CHATID="$TG_CHAT_ID"
+BOT_MSG="https://api.telegram.org/bot$TG_TOKEN/sendMessage"
+BOT_DOC="https://api.telegram.org/bot$TG_TOKEN/sendDocument"
+
+# Functions
+msg() { echo -e "[*] $1"; }
+status() { echo -e "[⏳] $1"; }
+tg() { curl -s -X POST "$BOT_MSG" -d chat_id="$CHATID" -d parse_mode=html -d text="$1" >/dev/null &; }
+tg_file() { curl -s -F document=@"$1" "$BOT_DOC" -F chat_id="$CHATID" -F caption="$2" >/dev/null &; }
+
+clone() {
+    status "Cloning Clang..."
+    git clone --depth=1 https://github.com/techyminati/android_prebuilts_clang_host_linux-x86_clang-6443078 clang
+    export PATH="$PWD/clang/bin:$PATH"
 }
 
-if [[ $1 == "up" || $1 == "update" ]]; then
-update
-exit
-fi
-
-clang() {
-echo -e " "
-        git clone https://github.com/techyminati/android_prebuilts_clang_host_linux-x86_clang-6443078 -b 11.0.1 ../clang --depth=1 
-        git clone https://android.googlesource.com/platform/prebuilts/gas/linux-x86 -b master ../gas --depth=1 
-echo -e "Clone clang Compiler"
-sleep 2
+setup() {
+    export KBUILD_BUILD_USER="mnrdnn"
+    PROCS=$(nproc)
+    KERVER=$(make kernelversion 2>/dev/null || echo "unknown")
+    COMMIT=$(git log --oneline -1 2>/dev/null || echo "no commit")
+    
+    MAKE_CMD="ARCH=arm64 \
+              CC=clang \
+              LD=ld.lld \
+              AR=llvm-ar \
+              NM=llvm-nm \
+              STRIP=llvm-strip \
+              OBJCOPY=llvm-objcopy \
+              CLANG_TRIPLE=aarch64-linux-gnu- \
+              CROSS_COMPILE=aarch64-linux-gnu- \
+              CROSS_COMPILE_ARM32=arm-linux-gnueabi-"
 }
-if [[ $1 == "clang" || $1 == "--clang" ]]; then
-clang
-fi
 
-compile() {
-
-# rm -rf out && mkdir -p out
-# sed -i 's/^CONFIG_LOCALVERSION=".*"/CONFIG_LOCALVERSION="StarX"/' arch/arm64/configs/$DEFCONFIG   #Change Kernel Name Here
-echo -e "$blue    \nMake DefConfig\n $nocol"
-mkdir -p out
-make O=out ARCH=arm64 $DEFCONFIG
-grep CONFIG_LOCALVERSION out/.config
-
-sleep 2
-# Build start
-echo -e "$blue    \nStarting kernel compilation...\n $nocol"
-make -j$(nproc --all) O=out ARCH=arm64 CC="ccache clang" CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- CLANG_TRIPLE=aarch64-linux-gnu-
-IMAGE=$(pwd)/out/arch/arm64/boot/Image.gz
-if ! [ -a "$IMAGE" ]; then
-        echo -e "Error"
+build() {
+    [ $INCREMENTAL = 0 ] && { make mrproper 2>/dev/null; rm -rf out; }
+    
+    status "Configuring..."
+    make O=out $DEFCONFIG >/dev/null 2>&1
+    
+    tg "🔨 <b>Building $KERNELNAME $VARIANT</b>%0A📱 $DEVICE%0A🔧 $(clang --version | head -n1 | cut -d'(' -f1)%0A📦 $KERVER"
+    
+    START=$(date +%s)
+    status "Compiling..."
+    make -j$(nproc) O=out $MAKE_CMD Image.gz
+    END=$(date +%s)
+    DIFF=$((END-START))
+    
+    if [ -f out/arch/arm64/boot/$FILES ]; then
+        SIZE=$(du -h out/arch/arm64/boot/$FILES | cut -f1)
+        msg "Success! $((DIFF/60))m $((DIFF%60))s | $SIZE"
+        tg "✅ <b>Build Success</b>%0A⏱️ $((DIFF/60))m $((DIFF%60))s%0A📦 $SIZE"
+        upload
+    else
+        msg "Build failed!"
+        tg "❌ <b>Build Failed</b>%0A⏱️ $((DIFF/60))m $((DIFF%60))s"
         exit 1
-else
-git clone --depth=1 -b RMX2195 https://github.com/insetion/Anykernel3.git AnyKernel 
-cp out/arch/arm64/boot/Image.gz AnyKernel
-cp out/arch/arm64/boot/dtbo.img AnyKernel
-cp out/arch/arm64/boot/dtb.img AnyKernel
-echo -e "Copying to Anykernel"
-sleep 10
-
-fi
+    fi
 }
-if [[ $1 == "gas" || $1 == "build" ]]; then
-compile
-echo -e "Compressing to Anykernel.zip"
-cd AnyKernel
-zip -r9 RMX2195-AnyKernel3.zip * -x .git README.md *placeholder
-echo -e "$blue    \nKernel Builded check Anykernel Folder...\n $nocol"
-fi
-case "$1" in
-  help)
-    echo "Cara Pemakaian:"
-    echo ""
-    echo " Untuk Update repository gunakan update"
-    echo " Untuk Update Clang gunakan clang"
-    echo " Untuk Mulai Compile gunakan gas or build"
-    echo " Untuk Hapus cache build gunakan clean"
-    echo " credit @mnrdnn/@udyneos"
-    ;;
-  *)
-    echo " Command Not found"
-    echo " Use bash build.sh help"
-    echo " For help"
-    ;;
-esac
+
+upload() {
+    ZIP="$KERNELNAME-$VARIANT-$(date +%Y%m%d-%H%M).zip"
+    AK=https://github.com/UdyneO2/Anykernel
+    AK_B=RMX2195
+    AKN=RMX2195-AnyKernel
+    git clone --depth=1 $AK -b $AK_B $AKN && rm -rf $AKN/.git $AKN/.github
+      if [[ -f out/arch/arm64/boot/Image.gz ]]; then
+        cp out/arch/arm64/boot/Image.gz $AKN/Image.gz
+        echo -e "Image.gz found"
+      else
+        echo -e "Image.gz not found"
+      fi
+    cd $AKN
+    zip -r9 "/tmp/$ZIP" * 2>/dev/null
+    tg_file "/tmp/$ZIP" "✅ <b>$KERNELNAME $VARIANT</b>%0A📱 $DEVICE%0A⏱️ $((DIFF/60))m $((DIFF%60))s"
+    msg "Done!"
+    cd ..
+}
+
+# Run
+clone
+setup
+build
